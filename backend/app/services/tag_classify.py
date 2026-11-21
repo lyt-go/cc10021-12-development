@@ -90,6 +90,72 @@ class TagClassifyService(BaseModuleService):
             "分层统计": {k: len(v) for k, v in categories.items() if v},
         }
 
+    def persist_ownership_tag(self, table_name: str, layer: str, group: str,
+                              basis: str, confirmer: str = "") -> dict[str, Any]:
+        """持久化标签归属数据：归属确认结论回写分类标签清单。
+
+        同一张表的「分层」标签只保留一条权威记录，确认结论覆盖自动分类结果；
+        同时记录负责组与确认依据，作为规则模板选择巡检目标的标签依据。
+        """
+        tag_rows = store.rows(self.MODULE)
+        existing = next(
+            (row for row in tag_rows
+             if row.get("关联表名") == table_name and row.get("分类维度") == "分层"),
+            None,
+        )
+        now = datetime.now(timezone.utc).isoformat()
+        if existing is not None:
+            old_value = existing.get("标签值")
+            existing["标签值"] = layer
+            existing["分类依据"] = f"归属确认回写：{basis}；负责组：{group}"
+            existing["生效时间"] = now
+            existing["标签版本"] = self._bump_version(existing.get("标签版本", "v1"))
+            existing["status"] = "已生效"
+            existing["pending"] = False
+            existing["abnormal"] = False
+            existing["归属负责组"] = group
+            existing["确认人"] = confirmer
+            return {
+                "标签编号": existing["标签编号"],
+                "持久化方式": "更新",
+                "原标签值": old_value,
+                "标签值": layer,
+            }
+
+        new_tid = max((int(r.get("id", 0)) for r in tag_rows), default=0) + 1
+        entry = {
+            "id": new_tid,
+            "标签编号": f"TAG_-{new_tid:04d}",
+            "标签名称": f"{table_name}_分层",
+            "分类维度": "分层",
+            "关联表名": table_name,
+            "标签值": layer,
+            "分类依据": f"归属确认回写：{basis}；负责组：{group}",
+            "生效时间": now,
+            "标签版本": "v1.0",
+            "归属负责组": group,
+            "确认人": confirmer,
+            "status": "已生效",
+            "pending": False,
+            "abnormal": False,
+        }
+        tag_rows.append(entry)
+        return {
+            "标签编号": entry["标签编号"],
+            "持久化方式": "新建",
+            "原标签值": "",
+            "标签值": layer,
+        }
+
+    @staticmethod
+    def _bump_version(version: Any) -> str:
+        text = str(version or "v1")
+        if "." in text:
+            head, tail = text.rsplit(".", 1)
+            if tail.isdigit():
+                return f"{head}.{int(tail) + 1}"
+        return f"{text}.1"
+
     def _sync_classification_rules(self) -> None:
         """标准化分类规则，将分类模式写入规则模板库供复用。"""
         template_rows = store.rows("dq_template")

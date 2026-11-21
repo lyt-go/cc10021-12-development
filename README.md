@@ -16,6 +16,7 @@
 │   └── vite.config.ts        dev server 配置（open: false）
 ├── backend/                  FastAPI（Python） 后端
 │   ├── app/routers/resource.py  通用查询/导出/登记/动作接口
+│   ├── app/routers/ownership.py 标签归属校验专用接口（签收权限/确认/轮次派单）
 │   ├── app/services/<key>.py    每个模块独立领域逻辑
 │   ├── app/services/base.py     共享服务骨架
 │   └── app/store.py          内存数据仓库与示例数据
@@ -60,6 +61,7 @@ npm run dev
 | 指标波动监控 | `metric_monitor` | 监控指标 | 指标编号、目标表名、监控字段 |
 | 质量评分卡 | `dq_scorecard` | 评分记录 | 记录编号、目标表名、完整性得分 |
 | 数据分类标签 | `tag_classify` | 分类标签 | 标签编号、标签名称、分类维度 |
+| 标签归属校验 | `tag_ownership` | 标签归属 | 归属编号、表名称、自动分层、业务签收、确认归属 |
 | 规则模板库 | `dq_template` | 规则模板 | 模板编号、模板名称、规则类型 |
 | 异常模式识别 | `anomaly_pattern` | 异常模式 | 模式编号、模式名称、检测方法 |
 | 质量报告生成 | `dq_report` | 质量报告 | 报告编号、报告周期、覆盖表数 |
@@ -68,6 +70,25 @@ npm run dev
 | 质量基线管理 | `dq_baseline` | 基线定义 | 基线编号、目标表名、基线指标 |
 | 主数据实体注册 | `mdm_entity` | 主数据实体 | 实体编号、实体名称、业务域 |
 | 质量趋势看板 | `dq_trend` | 趋势记录 | 记录编号、目标表名、日期 |
+
+## 标签归属校验链路
+
+目录按库名生成自动分层标签，业务组可能人工签收另一层归属。`tag_ownership`
+领域服务负责校验这两份归属声明，形成规则模板选择巡检目标时使用的标签归属数据：
+
+- 表目录新增「归属校验」字段，入库或重新进入目录时按库名写入自动分层来源记录；
+  库名保持不变，自动分层与业务签收各自留痕（`tag_ownership_source`）。
+- 签收/确认必须先取得该表的确认权限（`/api/ownership/permission/grant`），
+  未授权提交返回 403，通用 `actions` 入口拒绝改动签收结果。
+- 归属确认结论回写分类标签清单的「分层」标签（同表只保留一条权威记录，版本递增），
+  并同步表目录「归属校验」字段。
+- 巡检按轮次执行：规则模板按生效范围给负责组安排巡检；同一张表在同一轮次只允许
+  被领取一次，同一组同轮重复触发返回 409，未确认冲突按最新业务签收派单并标注
+  「待确认」标签依据。
+
+专用接口前缀：`/api/ownership`（`catalog/register`、`catalog/re-enter`、`signoff`、
+`confirm`、`conflicts`、`rounds/open`、`rounds/dispatch`、`rounds`）。
+前端「标签归属校验」页面（`/tag_ownership`）可按上述顺序走完整条链路。
 
 ## 约定
 

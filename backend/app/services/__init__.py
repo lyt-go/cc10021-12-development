@@ -12,6 +12,7 @@ from app.services.lineage_graph import LineageGraphService
 from app.services.metric_monitor import MetricMonitorService
 from app.services.dq_scorecard import DqScorecardService
 from app.services.tag_classify import TagClassifyService
+from app.services.tag_ownership import TagOwnershipService
 from app.services.dq_template import DqTemplateService
 from app.services.anomaly_pattern import AnomalyPatternService
 from app.services.dq_report import DqReportService
@@ -32,6 +33,7 @@ SERVICES: dict[str, BaseModuleService] = {
     "metric_monitor": MetricMonitorService(),
     "dq_scorecard": DqScorecardService(),
     "tag_classify": TagClassifyService(),
+    "tag_ownership": TagOwnershipService(),
     "dq_template": DqTemplateService(),
     "anomaly_pattern": AnomalyPatternService(),
     "dq_report": DqReportService(),

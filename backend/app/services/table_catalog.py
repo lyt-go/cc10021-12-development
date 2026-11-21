@@ -19,7 +19,7 @@ class TableCatalogService(BaseModuleService):
     MODULE = "table_catalog"
     ENTITY = "表目录"
     OPERATION_TERM = "入库"
-    LIST_FIELDS = ["表编号", "表名称", "所属库名", "表类型", "字段数量", "数据行数", "存储大小", "最后更新"]
+    LIST_FIELDS = ["表编号", "表名称", "所属库名", "表类型", "字段数量", "数据行数", "存储大小", "最后更新", "归属校验"]
     REQUIRED_FIELDS = ["表编号", "表名称", "所属库名"]
     STATUS_ORDER = ["草稿", "待校验", "已注册", "已下线"]
     ACTION_RULES = {"提交校验": "待校验", "确认注册": "已注册", "标记下线": "已下线"}
@@ -61,6 +61,9 @@ class TableCatalogService(BaseModuleService):
         # 触发分类标签关联
         tag_entries = self._dispatch_tag_classification(table_name, db_name, columns)
 
+        # 目录字段归属校验：按库名生成自动分层声明，纳入标签归属数据
+        ownership = self.trigger_ownership_validation(table_name, db_name)
+
         return {
             "注册表": table_name,
             "字段数量": len(columns),
@@ -68,7 +71,14 @@ class TableCatalogService(BaseModuleService):
             "校验详情": validation_issues,
             "画像任务数": profile_entries,
             "标签分类数": tag_entries,
+            "归属校验": ownership,
         }
+
+    def trigger_ownership_validation(self, table_name: str, db_name: str) -> dict[str, Any]:
+        """目录入库/重新进入目录时触发归属校验，按库名生成自动分层来源记录。"""
+        from app.services.tag_ownership import TagOwnershipService
+
+        return TagOwnershipService().submit_auto_claim(table_name, db_name)
 
     def _validate_columns(self, columns: list[dict]) -> list[dict]:
         """校验字段完整性：检查非空字段、主键唯一性和数据类型有效性。"""

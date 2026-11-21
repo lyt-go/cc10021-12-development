@@ -651,5 +651,12 @@ SEED_ROWS: dict[str, list[dict[str, Any]]] = {
   '准确率': '质量趋势看板样例3',
   '及时率': '质量趋势看板样例3',
   '综合质量': '质量趋势看板样例3',
-  '趋势标记': '质量趋势看板样例3'}]
+  '趋势标记': '质量趋势看板样例3'}],
+    # 标签归属校验：归属主表、双来源记录、签收权限、巡检轮次与领取记录。
+    # 初始为空，由表目录入库 → 归属校验链路按需生成。
+    "tag_ownership": [],
+    "tag_ownership_source": [],
+    "tag_ownership_permission": [],
+    "inspection_round": [],
+    "inspection_claim": []
 }

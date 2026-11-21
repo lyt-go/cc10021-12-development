@@ -1,12 +1,14 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
 import Overview from '@/views/Overview.vue'
+import OwnershipView from '@/views/OwnershipView.vue'
 import WorkbenchView from '@/views/WorkbenchView.vue'
 
 const router = createRouter({
   history: createWebHistory(),
   routes: [
     { path: '/', name: 'overview', component: Overview },
+    { path: '/tag_ownership', name: 'tag_ownership', component: OwnershipView },
     { path: '/:moduleKey', name: 'module', component: WorkbenchView, props: true },
   ],
 })
